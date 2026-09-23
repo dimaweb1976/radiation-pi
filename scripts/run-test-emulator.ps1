@@ -16,6 +16,12 @@ if (-not $configText.Contains('server_url = "http://127.0.0.1:18081"')) {
     throw 'This script only sends to the isolated test server at 127.0.0.1:18081.'
 }
 
+$baseUrl = 'http://127.0.0.1:18081'
+$measurementsBefore = Invoke-RestMethod -Uri "$baseUrl/api/measurements" -TimeoutSec 5
+$heartbeatsBefore = Invoke-RestMethod -Uri "$baseUrl/api/heartbeat" -TimeoutSec 5
+$eventIdsBefore = @(Invoke-RestMethod -Uri "$baseUrl/api/events" -TimeoutSec 5 |
+    ForEach-Object { $_.id })
+
 $oldToken = $env:RADIATION_PI_TOKEN
 $oldPythonPath = $env:PYTHONPATH
 try {
@@ -42,19 +48,22 @@ try {
     $env:PYTHONPATH = $oldPythonPath
 }
 
-$measurements = Invoke-RestMethod -Uri 'http://127.0.0.1:18081/api/measurements' -TimeoutSec 5
-$heartbeats = Invoke-RestMethod -Uri 'http://127.0.0.1:18081/api/heartbeat' -TimeoutSec 5
-$events = Invoke-RestMethod -Uri 'http://127.0.0.1:18081/api/events' -TimeoutSec 5
-$eventTypes = @($events | ForEach-Object { $_.eventType })
-if (@($measurements).Count -ne 8) {
-    throw "Expected 8 measurements after 2 simulated read failures, got $(@($measurements).Count)."
+$measurements = Invoke-RestMethod -Uri "$baseUrl/api/measurements" -TimeoutSec 5
+$heartbeats = Invoke-RestMethod -Uri "$baseUrl/api/heartbeat" -TimeoutSec 5
+$events = Invoke-RestMethod -Uri "$baseUrl/api/events" -TimeoutSec 5
+$newMeasurements = $measurements.Count - $measurementsBefore.Count
+$newHeartbeats = $heartbeats.Count - $heartbeatsBefore.Count
+$newEventTypes = @($events | Where-Object { $_.id -notin $eventIdsBefore } |
+    ForEach-Object { $_.eventType })
+if ($newMeasurements -ne 8) {
+    throw "Expected 8 new measurements after 2 simulated read failures, got $newMeasurements."
 }
-if (@($heartbeats).Count -lt 3) {
-    throw "Expected at least 3 heartbeats, got $(@($heartbeats).Count)."
+if ($newHeartbeats -lt 3) {
+    throw "Expected at least 3 new heartbeats, got $newHeartbeats."
 }
 foreach ($required in @('RADIATION_WARNING', 'RADIATION_ALARM', 'RADIATION_NORMAL')) {
-    if ($required -notin $eventTypes) { throw "Missing expected event: $required" }
+    if ($required -notin $newEventTypes) { throw "Missing expected event in this run: $required" }
 }
-Write-Host "Test run passed: $(@($measurements).Count) measurements, $(@($heartbeats).Count) heartbeats."
-Write-Host "Events: $($eventTypes -join ', ')"
+Write-Host "Test run passed: $newMeasurements new measurements, $newHeartbeats new heartbeats."
+Write-Host "New events: $($newEventTypes -join ', ')"
 Write-Host 'Dashboard: http://127.0.0.1:18081/'
