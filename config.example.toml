@@ -1,0 +1,11 @@
+# Example for an isolated test server with station 1 / detector 4 fixtures.
+# Copy to config.local.toml and set RADIATION_PI_TOKEN separately.
+# A real Pi must use an HTTPS server URL.
+server_url = "http://127.0.0.1:8080"
+station_id = 1
+detector_ids = [4]
+unit = "uSv/h"
+measurement_interval_seconds = 5
+heartbeat_interval_seconds = 30
+request_timeout_seconds = 10
+outbox_path = "data/outbox.sqlite3"
