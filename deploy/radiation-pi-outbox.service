@@ -1,0 +1,18 @@
+[Unit]
+Description=Flush Radiation Pi measurement outbox
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=radiation-pi
+Group=radiation-pi
+WorkingDirectory=/opt/radiation-pi
+EnvironmentFile=/etc/radiation-pi/device.env
+ExecStart=/opt/radiation-pi/.venv/bin/radiation-pi --config /etc/radiation-pi/config.toml outbox-flush
+SuccessExitStatus=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/radiation-pi

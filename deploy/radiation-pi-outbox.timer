@@ -1,0 +1,11 @@
+[Unit]
+Description=Retry Radiation Pi outbox every minute
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=1min
+Persistent=true
+Unit=radiation-pi-outbox.service
+
+[Install]
+WantedBy=timers.target
